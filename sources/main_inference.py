@@ -1,17 +1,18 @@
 import torch
 import numpy as np
 from torchvision import transforms
+from torchvision.transforms import InterpolationMode
 import cv2
 from PIL import Image
 
 import custom_model
 
 # Number of classes in the dataset
-num_classes = 5
+num_classes = 10
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-model, input_size = custom_model.initialize_model(num_classes, keep_feature_extract=True, use_pretrained=False)
+model, input_size = custom_model.initialize_model(num_classes, keep_feature_extract=True)
 
 state_dict = torch.load("training_output_Skydiver_dataset_final/best_DeepLabV3_Skydiver.pth", map_location=device)
 
@@ -19,10 +20,11 @@ model = model.to(device)
 model.load_state_dict(state_dict)
 model.eval()
 
-transforms_image =  transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])
+transforms_image = transforms.Compose([
+                transforms.Resize(size=(512, 512), interpolation=InterpolationMode.NEAREST),
+                transforms.ToTensor(),
+                transforms.Normalize([0.485, 0.456, 0.406, 0], [0.229, 0.224, 0.225, 1])
+            ])
 
 for idx in range(1, 3000, 25):
 

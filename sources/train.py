@@ -21,21 +21,20 @@ def debug_export_before_forward(inputs, labels, idx):
     cv2.imwrite(f"{idx:06}_la.png", la)
 
 
-def iou(pred, target, n_classes = 3):
-  ious = []
-  pred = pred.view(-1)
-  target = target.view(-1)
+def iou(pred, target, n_classes = 10):
+    ious = []
+    pred = pred.view(-1)
+    target = target.view(-1)
 
-  # Ignore IoU for background class ("0")
-  for cls in range(1, n_classes):  # This goes from 1:n_classes-1 -> class "0" is ignored
-    pred_inds = pred == cls
-    target_inds = target == cls
-    intersection = (pred_inds[target_inds]).long().sum().data.cpu().item()  # Cast to long to prevent overflows
-    union = pred_inds.long().sum().data.cpu().item() + target_inds.long().sum().data.cpu().item() - intersection
-    if union > 0:
-        ious.append(float(intersection) / float(max(union, 1)))
+    for cls in range(0, n_classes):
+        pred_inds = pred == cls
+        target_inds = target == cls
+        intersection = (pred_inds[target_inds]).long().sum().data.cpu().item()  # Cast to long to prevent overflows
+        union = pred_inds.long().sum().data.cpu().item() + target_inds.long().sum().data.cpu().item() - intersection
+        if union > 0:
+            ious.append(float(intersection) / float(max(union, 1)))
 
-  return np.array(ious)
+    return np.array(ious)
 
 
 def train_model(model, num_classes, dataloaders, criterion, optimizer, device, dest_dir, num_epochs=25):

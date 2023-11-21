@@ -22,7 +22,6 @@ print("Torchvision Version: ",torchvision.__version__)
 
 
 def main(data_dir, dest_dir, num_classes, batch_size, num_epochs, keep_feature_extract, weight):
-# def main():
 
     print("Initializing Datasets and Dataloaders...")
 
@@ -34,7 +33,7 @@ def main(data_dir, dest_dir, num_classes, batch_size, num_epochs, keep_feature_e
     print("Initializing Model...")
 
     # Initialize model
-    model_deeplabv3, input_size = initialize_model(num_classes, keep_feature_extract, use_pretrained=True)
+    model_deeplabv3 = initialize_model(num_classes, keep_feature_extract)
 
     # Detect if we have a GPU available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -61,7 +60,7 @@ def main(data_dir, dest_dir, num_classes, batch_size, num_epochs, keep_feature_e
                 print("\t", name)
 
     # Observe that all parameters are being optimized
-    optimizer_ft = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
+    optimizer_ft = optim.Adam(params_to_update, lr=0.001, weight_decay=1e-4)
 
     # Setup the loss function
     criterion = nn.CrossEntropyLoss(weight=(torch.FloatTensor(weight).to(device) if weight else None))
