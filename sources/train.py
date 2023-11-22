@@ -3,23 +3,7 @@ import torch
 import numpy as np
 import time
 import copy
-import cv2
-
-def debug_export_before_forward(inputs, labels, idx):
-    # im = inputs[0]*255;
-    im = inputs[0];
-    im = im.to('cpu').numpy()
-    im[0, :, :] = im[0, :, :] * 0.229 + 0.485
-    im[1, :, :] = im[1, :, :] * 0.224 + 0.456
-    im[2, :, :] = im[2, :, :] * 0.225 + 0.406
-    im = im * 255
-    im = im.astype(np.uint8)
-    la = labels[0].to(torch.uint8).to('cpu').numpy()
-    im = im.transpose([1, 2, 0])
-    im = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
-    cv2.imwrite(f"{idx:06}_im.png", im)
-    cv2.imwrite(f"{idx:06}_la.png", la)
-
+from tqdm import tqdm
 
 def iou(pred, target, n_classes = 10):
     ious = []
@@ -62,7 +46,7 @@ def train_model(model, num_classes, dataloaders, criterion, optimizer, device, d
             running_iou_means = []
 
             # Iterate over data.
-            for inputs, labels in dataloaders[phase]:
+            for inputs, labels in tqdm(dataloaders[phase]):
                 inputs = inputs.to(device)
                 labels = labels.to(device)
 
@@ -70,9 +54,6 @@ def train_model(model, num_classes, dataloaders, criterion, optimizer, device, d
                 if 1 == inputs.shape[0]:
                     print("Skipping iteration because batch_size = 1")
                     continue
-
-                # Debug
-                # debug_export_before_forward(inputs, labels, counter)
 
                 # zero the parameter gradients
                 optimizer.zero_grad()
