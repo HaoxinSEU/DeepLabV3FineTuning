@@ -5,20 +5,7 @@ import time
 import copy
 from tqdm import tqdm
 
-def iou(pred, target, n_classes = 10):
-    ious = []
-    pred = pred.view(-1)
-    target = target.view(-1)
-
-    for cls in range(0, n_classes):
-        pred_inds = pred == cls
-        target_inds = target == cls
-        intersection = (pred_inds[target_inds]).long().sum().data.cpu().item()  # Cast to long to prevent overflows
-        union = pred_inds.long().sum().data.cpu().item() + target_inds.long().sum().data.cpu().item() - intersection
-        if union > 0:
-            ious.append(float(intersection) / float(max(union, 1)))
-
-    return np.array(ious)
+from iou import iou
 
 
 def train_model(model, num_classes, dataloaders, criterion, optimizer, device, dest_dir, num_epochs=25):
@@ -85,7 +72,6 @@ def train_model(model, num_classes, dataloaders, criterion, optimizer, device, d
             else:
                 epoch_acc = 0.
 
-
             print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
 
             # deep copy the model
@@ -96,7 +82,7 @@ def train_model(model, num_classes, dataloaders, criterion, optimizer, device, d
                 val_acc_history.append(epoch_acc)
 
             # Save current model every 25 epochs
-            if 0 == epoch%25:
+            if 0 == epoch % 25:
                 current_model_path = os.path.join(dest_dir, f"checkpoint_{epoch:04}_DeepLabV3_Skydiver.pth")
                 print(f"Save current model : {current_model_path}")
                 torch.save(model.state_dict(), current_model_path)

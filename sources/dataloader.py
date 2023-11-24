@@ -48,7 +48,8 @@ class DataLoaderSegmentation(torch.utils.data.dataset.Dataset):
 
             # Concatenate image and label, to apply same transformation on both
             image_np = np.asarray(image)
-            label_np = np.asarray(label)
+            label_np = np.array(label)
+            label_np[label_np == 255] = 2  # replace 255 by 2 in the label, so that crossEntropy can work
             new_shape = (image_np.shape[0], image_np.shape[1], image_np.shape[2] + 1)
             image_and_label_np = np.zeros(new_shape, image_np.dtype)
             image_and_label_np[:, :, 0:3] = image_np

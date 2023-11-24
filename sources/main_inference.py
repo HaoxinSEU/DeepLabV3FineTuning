@@ -1,64 +1,49 @@
 import torch
 import numpy as np
-from torchvision import transforms
-from torchvision.transforms import InterpolationMode
-import cv2
-from PIL import Image
+from tqdm import tqdm
 
+# local import
 import custom_model
+from dataloader import DataLoaderSegmentation
+from iou import iou
 
-# Number of classes in the dataset
-num_classes = 10
+# file path
+data_dir = "../example_forest"
+weights_dir = "../saved_model_weights/best_DeepLabV3_weights.pth"
+num_classes = 3
 
+# detect if we have GPU or not
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-model, input_size = custom_model.initialize_model(num_classes, keep_feature_extract=True)
-
-state_dict = torch.load("training_output_Skydiver_dataset_final/best_DeepLabV3_Skydiver.pth", map_location=device)
-
+# import our trained model
+model = custom_model.initialize_model(num_classes, keep_feature_extract=True)
+state_dict = torch.load(weights_dir, map_location=device)
 model = model.to(device)
 model.load_state_dict(state_dict)
+
+# set the model in evaluation mode
 model.eval()
 
-transforms_image = transforms.Compose([
-                transforms.Resize(size=(512, 512), interpolation=InterpolationMode.NEAREST),
-                transforms.ToTensor(),
-                transforms.Normalize([0.485, 0.456, 0.406, 0], [0.229, 0.224, 0.225, 1])
-            ])
+# load the test set
+test_dataset = DataLoaderSegmentation(data_dir, 'test')
+test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=8, shuffle=False, num_workers=2)
 
-for idx in range(1, 3000, 25):
+print("Starting to do inference...")
 
-    image = Image.open(f"/tmp/pycharm_project_782/03.03.20_saut_4/{idx:06}.png")
+running_iou_means = []
 
-    image_np = np.asarray(image)
-    # image_np = cv2.resize(image_np, 0.5, 0.5, cv2.INTER_CUBIC)
-    width = int(image_np.shape[1] * 0.3)
-    height = int(image_np.shape[0] * 0.3)
-    dim = (width, height)
-    image_np = cv2.resize(image_np, dim, interpolation=cv2.INTER_AREA)
+# Iterate over test set
+for inputs, labels in tqdm(test_dataloader):
+    inputs = inputs.to(device)
+    labels = labels.to(device)
 
-    image = Image.fromarray(image_np)
-    image = transforms_image(image)
-    image = image.unsqueeze(0)
-
-    image = image.to(device)
-
-    outputs = model(image)["out"]
-
+    # do the inference
+    outputs = model(inputs)["out"]
     _, preds = torch.max(outputs, 1)
 
-    preds = preds.to("cpu")
+    # statistics
+    iou_mean = iou(preds, labels, num_classes).mean()
+    running_iou_means.append(iou_mean)
 
-    preds_np = preds.squeeze(0).cpu().numpy().astype(np.uint8)
-
-    print(preds_np.shape)
-    print(image_np.shape)
-    # preds_np = cv2.cvtColor(preds_np, cv2.COLOR_GRAY2BGR)
-    image_np = cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR)
-
-    preds_np_color = cv2.applyColorMap(preds_np * 50, cv2.COLORMAP_HSV)
-
-    cv2.imwrite(f"./results/{idx:04}_segmentation.png", preds_np_color)
-    cv2.imwrite(f"./results/{idx:04}_image.png", image_np)
-
-
+test_iou = np.array(running_iou_means).mean()
+print('Test mIoU is: ', test_iou)
